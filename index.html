@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+        <link rel="stylesheet" href="./css/style.css" type="text/css"/>
+    </head>
+    <body>
+        <div class="chat">
+            <input type="text" class="chat-user" placeholder="Enter your name"/>
+            <div class="chat-messages" id="chat-messages"></div>
+            <textarea class="chat-textarea" placeholder="Type your message"></textarea>
+            <div class="chat-status">Status: <span id="status">Idle</span></div>
+        </div>
+
+        <script src="http://127.0.0.1:2222/socket.io/socket.io.js"></script>
+        <script type="text/javascript">
+            (function () {
+
+                function getnode(s) {
+                    return document.querySelector(s);
+                }
+
+                function setMessages(messages) {
+                    var text = "";
+                    var area = document.getElementById('chat-messages');
+                    for(var i=0;i<messages.length;i++){
+                        var m = messages[i];
+                        text += "<p>"+m.name+": "+m.message+"</p>";
+                    }
+                    area.innerHTML = text;
+                }
+
+
+                function setstatus(s) {
+                    var status = document.getElementById('status');
+                    status.innerText = s;
+
+                    if(status.innerText !== "Idle"){
+                        var delay = setTimeout(function () {
+                            setstatus("Idle");
+                            clearInterval(delay);
+                        },3000);
+                    }
+
+                }
+
+                var textarea = getnode('.chat textarea');
+                var chatname = getnode('.chat-user');
+
+                try{
+                    var socket = io.connect('http://127.0.0.1:2222');
+                }
+                catch(err){
+                    console.log('Socket error');
+                    alert('Server down for maintainence');
+                }
+
+                if(socket !== undefined){
+
+                    socket.on('exist',function (messages) {
+                        setMessages(messages);
+                    });
+
+                    socket.on('add',function (message) {
+                        var messagea = document.getElementById('chat-messages');
+                        var messagearea = document.getElementById('chat-messages').innerHTML;
+                        messagearea+="<p>"+message.name+": "+message.message+"</p>";
+                        messagea.innerHTML = messagearea;
+                    });
+
+                    socket.on('status',function (data) {
+                        setstatus((typeof data === "object")?data.message:data);
+
+                        if(data.clear === true){
+                            textarea.value = "";
+                        }
+
+                    });
+
+                    textarea.addEventListener('keydown',function (event) {
+                        var self = this;
+                        var name = chatname.value;
+                        var message = textarea.value;
+
+                        if(event.which === 13 && event.shiftKey === false){
+                            var obj = {};
+                            obj.name = name;
+                            obj.message = message;
+                            socket.emit('input',obj);
+                            event.preventDefault();
+                        }
+
+                    });
+                }
+                else{
+
+                }
+
+            })();
+        </script>
+    </body>
+</html>
